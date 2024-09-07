@@ -2,6 +2,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"net"
@@ -11,7 +12,6 @@ import (
 type Client struct {
 	ID          string
 	Conn        net.Conn
-	OwnedRooms  map[string]*Room
 	JoinedRooms map[string]*Room
 }
 
@@ -27,6 +27,12 @@ type Server struct {
 	Clients map[string]*Client
 	Rooms   map[string]*Room
 	Mu      sync.Mutex
+}
+
+// Estructura del mensaje JSON para identificación
+type IdentifyMessage struct {
+	Type     string `json:"type"`
+	Username string `json:"username"`
 }
 
 // NewServer creates a new server instance with the specified address.
@@ -69,50 +75,59 @@ func (s *Server) Start() {
 	}
 }
 
-// handleConnection handles a client connection in a separate goroutine.
+// Manejar conexiones
 func (s *Server) handleConnection(conn net.Conn) {
 	defer conn.Close()
 
 	buf := make([]byte, 1024)
 
-	var clientID string
-	for {
-		conn.Write([]byte("Ingrese un ID único: "))
-		n, err := conn.Read(buf)
-		if err != nil {
-			log.Printf("Error leyendo ID del cliente: %v", err)
-			return
-		}
-		clientID = string(buf[:n])
-
-		s.Mu.Lock()
-		_, exists := s.Clients[clientID]
-		s.Mu.Unlock()
-
-		if exists {
-			conn.Write([]byte("El ID ya está en uso. Intente con otro ID.\n"))
-		} else {
-			break
-		}
+	// Leer el mensaje inicial del cliente (se espera que sea el JSON de identificación)
+	n, err := conn.Read(buf)
+	if err != nil {
+		log.Printf("Error leyendo del cliente: %v", err)
+		return
 	}
 
+	// Deserializar el JSON
+	var identifyMsg IdentifyMessage
+	err = json.Unmarshal(buf[:n], &identifyMsg)
+	if err != nil {
+		conn.Write([]byte("Error: El mensaje no es un JSON válido.\n"))
+		return
+	}
+
+	// Verificar que el tipo sea "IDENTIFY"
+	if identifyMsg.Type != "IDENTIFY" {
+		conn.Write([]byte("Error: Se esperaba un mensaje de tipo IDENTIFY.\n"))
+		return
+	}
+
+	// Comprobar si el nombre de usuario es único
+	s.Mu.Lock()
+	_, exists := s.Clients[identifyMsg.Username]
+	s.Mu.Unlock()
+
+	if exists {
+		conn.Write([]byte("Error: El nombre de usuario ya está en uso.\n"))
+		return
+	}
 	// Crear el cliente
 	client := &Client{
-		ID:          clientID,
+		ID:          identifyMsg.Username,
 		Conn:        conn,
-		OwnedRooms:  make(map[string]*Room),
 		JoinedRooms: make(map[string]*Room),
 	}
 
 	// Unir al cliente al cuarto general
 	s.Mu.Lock()
 	generalRoom := s.Rooms["general"]
-	generalRoom.Members[clientID] = client
+	generalRoom.Members[identifyMsg.Username] = client
 	client.JoinedRooms["general"] = generalRoom
-	s.Clients[clientID] = client
+	s.Clients[identifyMsg.Username] = client
 	s.Mu.Unlock()
 
 	conn.Write([]byte("Te has unido al cuarto general.\n"))
+
 	go listenToClientMessages(s, client)
 	go writeToClient(s, client)
 }
