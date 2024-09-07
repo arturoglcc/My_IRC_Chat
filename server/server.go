@@ -8,22 +8,44 @@ import (
 	"sync"
 )
 
+type Client struct {
+	ID          string
+	Conn        net.Conn
+	OwnedRooms  map[string]*Room
+	JoinedRooms map[string]*Room
+}
+
+type Room struct {
+	ID      string
+	Owner   *Client
+	Members map[string]*Client
+}
+
 // Server struct represents the server with necessary fields to manage connections and handle client communication.
 type Server struct {
 	Address string
-	Clients map[net.Conn]bool
+	Clients map[string]*Client
+	Rooms   map[string]*Room
 	Mu      sync.Mutex
-	Rooms   map[string][]net.Conn
-	RoomMu  sync.Mutex
 }
 
 // NewServer creates a new server instance with the specified address.
 func NewServer(address string) *Server {
-	return &Server{
+	server := &Server{
 		Address: address,
-		Clients: make(map[net.Conn]bool),
-		Rooms:   make(map[string][]net.Conn),
+		Clients: make(map[string]*Client),
+		Rooms:   make(map[string]*Room),
 	}
+
+	generalRoom := &Room{
+		ID:      "general",
+		Owner:   nil,
+		Members: make(map[string]*Client),
+	}
+
+	server.Rooms["general"] = generalRoom
+
+	return server
 }
 
 // Start starts the server to listen for incoming client connections.
@@ -51,36 +73,46 @@ func (s *Server) Start() {
 func (s *Server) handleConnection(conn net.Conn) {
 	defer conn.Close()
 
-	// Add the connection to the clients map
-	s.Mu.Lock()
-	s.Clients[conn] = true
-	s.Mu.Unlock()
-
-	fmt.Printf("Client connected: %s\n", conn.RemoteAddr().String())
-
-	// Handle client communication here (e.g., reading from/writing to conn)
 	buf := make([]byte, 1024)
+
+	var clientID string
 	for {
+		conn.Write([]byte("Ingrese un ID único: "))
 		n, err := conn.Read(buf)
 		if err != nil {
-			log.Printf("Error reading from connection: %v", err)
-			break
+			log.Printf("Error leyendo ID del cliente: %v", err)
+			return
 		}
-		message := string(buf[:n])
-		fmt.Printf("Received message: %s\n", message)
+		clientID = string(buf[:n])
 
-		// Echo back the message
-		_, err = conn.Write(buf[:n])
-		if err != nil {
-			log.Printf("Error writing to connection: %v", err)
+		s.Mu.Lock()
+		_, exists := s.Clients[clientID]
+		s.Mu.Unlock()
+
+		if exists {
+			conn.Write([]byte("El ID ya está en uso. Intente con otro ID.\n"))
+		} else {
 			break
 		}
 	}
 
-	// Remove the connection from the clients map when done
+	// Crear el cliente
+	client := &Client{
+		ID:          clientID,
+		Conn:        conn,
+		OwnedRooms:  make(map[string]*Room),
+		JoinedRooms: make(map[string]*Room),
+	}
+
+	// Unir al cliente al cuarto general
 	s.Mu.Lock()
-	delete(s.Clients, conn)
+	generalRoom := s.Rooms["general"]
+	generalRoom.Members[clientID] = client
+	client.JoinedRooms["general"] = generalRoom
+	s.Clients[clientID] = client
 	s.Mu.Unlock()
 
-	fmt.Printf("Client disconnected: %s\n", conn.RemoteAddr().String())
+	conn.Write([]byte("Te has unido al cuarto general.\n"))
+	go listenToClientMessages(s, client)
+	go writeToClient(s, client)
 }
