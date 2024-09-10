@@ -13,20 +13,21 @@ type Client struct {
 	ID          string
 	Conn        net.Conn
 	JoinedRooms map[string]*Room
+	Status      string
 }
 
 type Room struct {
-	ID      string
-	Owner   *Client
+	Name    string
 	Members map[string]*Client
+	Invited map[string]bool
 }
 
-// Server struct represents the server with necessary fields to manage connections and handle client communication.
 type Server struct {
 	Address string
 	Clients map[string]*Client
 	Rooms   map[string]*Room
 	Mu      sync.Mutex
+	RoomMu  sync.Mutex
 }
 
 // Estructura del mensaje JSON para identificación
@@ -44,8 +45,7 @@ func NewServer(address string) *Server {
 	}
 
 	generalRoom := &Room{
-		ID:      "general",
-		Owner:   nil,
+		Name:    "general",
 		Members: make(map[string]*Client),
 	}
 
@@ -75,7 +75,6 @@ func (s *Server) Start() {
 	}
 }
 
-// Manejar conexiones
 func (s *Server) handleConnection(conn net.Conn) {
 	defer conn.Close()
 
@@ -98,7 +97,46 @@ func (s *Server) handleConnection(conn net.Conn) {
 
 	// Verificar que el tipo sea "IDENTIFY"
 	if identifyMsg.Type != "IDENTIFY" {
-		conn.Write([]byte("Error: Se esperaba un mensaje de tipo IDENTIFY.\n"))
+		// Crear la respuesta en caso de que el tipo no sea "IDENTIFY"
+		response := map[string]string{
+			"type":      "RESPONSE",
+			"operation": "INVALID",
+			"result":    "NOT_IDENTIFIED",
+		}
+
+		// Serializar la respuesta JSON
+		jsonResponse, err := json.Marshal(response)
+		if err != nil {
+			log.Printf("Error al serializar la respuesta JSON: %v", err)
+			return
+		}
+
+		// Enviar la respuesta al cliente
+		conn.Write(jsonResponse)
+
+		// Desconectar al cliente
+		log.Printf("Desconectando al cliente por mensaje no válido.")
+		return
+	}
+
+	// Verificar la longitud del ID (debe ser a lo más 8 caracteres)
+	if len(identifyMsg.Username) > 8 {
+		response := map[string]string{
+			"type":      "RESPONSE",
+			"operation": "IDENTIFY",
+			"result":    "INVALID_USERNAME_LENGTH",
+			"extra":     identifyMsg.Username,
+		}
+
+		// Serializar la respuesta JSON
+		jsonResponse, err := json.Marshal(response)
+		if err != nil {
+			log.Printf("Error al serializar la respuesta JSON: %v", err)
+			return
+		}
+
+		// Enviar la respuesta al cliente
+		conn.Write(jsonResponse)
 		return
 	}
 
@@ -108,14 +146,32 @@ func (s *Server) handleConnection(conn net.Conn) {
 	s.Mu.Unlock()
 
 	if exists {
-		conn.Write([]byte("Error: El nombre de usuario ya está en uso.\n"))
+		// El nombre de usuario ya está en uso, enviar respuesta en formato JSON
+		response := map[string]string{
+			"type":      "RESPONSE",
+			"operation": "IDENTIFY",
+			"result":    "USER_ALREADY_EXISTS",
+			"extra":     identifyMsg.Username,
+		}
+
+		// Serializar la respuesta JSON
+		jsonResponse, err := json.Marshal(response)
+		if err != nil {
+			log.Printf("Error al serializar la respuesta JSON: %v", err)
+			return
+		}
+
+		// Enviar la respuesta al cliente
+		conn.Write(jsonResponse)
 		return
 	}
+
 	// Crear el cliente
 	client := &Client{
 		ID:          identifyMsg.Username,
 		Conn:        conn,
 		JoinedRooms: make(map[string]*Room),
+		Status:      "ACTIVE",
 	}
 
 	// Unir al cliente al cuarto general
@@ -128,6 +184,8 @@ func (s *Server) handleConnection(conn net.Conn) {
 
 	conn.Write([]byte("Te has unido al cuarto general.\n"))
 
+	// Notificar a los demás clientes que un nuevo usuario se ha conectado
+	notifyNewUser(s, client)
+
 	go listenToClientMessages(s, client)
-	go writeToClient(s, client)
 }
