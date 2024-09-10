@@ -6,7 +6,9 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"os"
 	"sync"
+	"time"
 )
 
 type Client struct {
@@ -30,7 +32,7 @@ type Server struct {
 	RoomMu  sync.Mutex
 }
 
-// Estructura del mensaje JSON para identificación
+// IdentifyMessage Json structure for identification
 type IdentifyMessage struct {
 	Type     string `json:"type"`
 	Username string `json:"username"`
@@ -68,6 +70,7 @@ func (s *Server) Start() {
 		conn, err := listener.Accept()
 		if err != nil {
 			log.Printf("Failed to accept connection: %v", err)
+			time.Sleep(1 * time.Second)
 			continue
 		}
 
@@ -80,14 +83,14 @@ func (s *Server) handleConnection(conn net.Conn) {
 
 	buf := make([]byte, 1024)
 
-	// Leer el mensaje inicial del cliente (se espera que sea el JSON de identificación)
+	// Reads the first message of the client (it's supposed to be the identify Json)
 	n, err := conn.Read(buf)
 	if err != nil {
 		log.Printf("Error leyendo del cliente: %v", err)
 		return
 	}
 
-	// Deserializar el JSON
+	//Deserialize JSON
 	var identifyMsg IdentifyMessage
 	err = json.Unmarshal(buf[:n], &identifyMsg)
 	if err != nil {
@@ -95,31 +98,31 @@ func (s *Server) handleConnection(conn net.Conn) {
 		return
 	}
 
-	// Verificar que el tipo sea "IDENTIFY"
+	// Verify type "IDENTIFY"
 	if identifyMsg.Type != "IDENTIFY" {
-		// Crear la respuesta en caso de que el tipo no sea "IDENTIFY"
+		// response in case type is not "IDENTIFY"
 		response := map[string]string{
 			"type":      "RESPONSE",
 			"operation": "INVALID",
 			"result":    "NOT_IDENTIFIED",
 		}
 
-		// Serializar la respuesta JSON
+		// Serialice Json response
 		jsonResponse, err := json.Marshal(response)
 		if err != nil {
 			log.Printf("Error al serializar la respuesta JSON: %v", err)
 			return
 		}
 
-		// Enviar la respuesta al cliente
+		// Send the response to the client
 		conn.Write(jsonResponse)
 
-		// Desconectar al cliente
+		// Disconnect client
 		log.Printf("Desconectando al cliente por mensaje no válido.")
 		return
 	}
 
-	// Verificar la longitud del ID (debe ser a lo más 8 caracteres)
+	// Verify length of username (It must be up to 8 characters)
 	if len(identifyMsg.Username) > 8 {
 		response := map[string]string{
 			"type":      "RESPONSE",
@@ -128,25 +131,25 @@ func (s *Server) handleConnection(conn net.Conn) {
 			"extra":     identifyMsg.Username,
 		}
 
-		// Serializar la respuesta JSON
+		// Serialice Json response
 		jsonResponse, err := json.Marshal(response)
 		if err != nil {
 			log.Printf("Error al serializar la respuesta JSON: %v", err)
 			return
 		}
 
-		// Enviar la respuesta al cliente
+		// Send the response to the client
 		conn.Write(jsonResponse)
 		return
 	}
 
-	// Comprobar si el nombre de usuario es único
+	// Check if username is unique
 	s.Mu.Lock()
 	_, exists := s.Clients[identifyMsg.Username]
 	s.Mu.Unlock()
 
 	if exists {
-		// El nombre de usuario ya está en uso, enviar respuesta en formato JSON
+		// If username is not unique, send response in Json format
 		response := map[string]string{
 			"type":      "RESPONSE",
 			"operation": "IDENTIFY",
@@ -154,19 +157,19 @@ func (s *Server) handleConnection(conn net.Conn) {
 			"extra":     identifyMsg.Username,
 		}
 
-		// Serializar la respuesta JSON
+		// Serialice Json response
 		jsonResponse, err := json.Marshal(response)
 		if err != nil {
 			log.Printf("Error al serializar la respuesta JSON: %v", err)
 			return
 		}
 
-		// Enviar la respuesta al cliente
+		// Send the response to the client
 		conn.Write(jsonResponse)
 		return
 	}
 
-	// Crear el cliente
+	// create client
 	client := &Client{
 		ID:          identifyMsg.Username,
 		Conn:        conn,
@@ -174,7 +177,7 @@ func (s *Server) handleConnection(conn net.Conn) {
 		Status:      "ACTIVE",
 	}
 
-	// Unir al cliente al cuarto general
+	// Join client to general room
 	s.Mu.Lock()
 	generalRoom := s.Rooms["general"]
 	generalRoom.Members[identifyMsg.Username] = client
@@ -184,8 +187,12 @@ func (s *Server) handleConnection(conn net.Conn) {
 
 	conn.Write([]byte("Te has unido al cuarto general.\n"))
 
-	// Notificar a los demás clientes que un nuevo usuario se ha conectado
 	notifyNewUser(s, client)
 
 	go listenToClientMessages(s, client)
+}
+
+func terminateServer() {
+	log.Println("El cuarto general está vacío. Terminando el servidor...")
+	os.Exit(0) // Cerrar el servidor
 }
