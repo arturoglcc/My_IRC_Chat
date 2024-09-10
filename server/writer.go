@@ -1,10 +1,5 @@
 package main
 
-import (
-	"encoding/json"
-	"log"
-)
-
 func notifyNewUser(server *Server, newClient *Client) {
 	notification := map[string]string{
 		"type":     "NEW_USER",
@@ -19,11 +14,10 @@ func notifyClientsOfStatusChange(server *Server, client *Client) {
 		"username": client.ID,
 		"status":   client.Status,
 	}
-
 	sendMessageToAll(server, client, notification, true)
 }
 
-func sendUserList(server *Server, requestingClient *Client) {
+func sendUserList(server *Server, client *Client) {
 	users := make(map[string]string)
 
 	// Block to read client map in a safe way
@@ -38,41 +32,19 @@ func sendUserList(server *Server, requestingClient *Client) {
 		"users": users,
 	}
 
-	jsonUserList, err := json.Marshal(userListMessage)
-	if err != nil {
-		log.Printf("Error al serializar la lista de usuarios: %v", err)
-		return
-	}
-
-	_, err = requestingClient.Conn.Write(jsonUserList)
-	if err != nil {
-		log.Printf("Error al enviar la lista de usuarios al cliente %s: %v", requestingClient.ID, err)
-	}
+	sendJSONMessage(client, userListMessage, "Error al serializar la lista de usuarios",
+		"Error al enviar la lista de usuarios al usuario")
 }
 
-func handleTextMessage(server *Server, sender *Client, msg map[string]interface{}) {
-	recipientUsername, ok := msg["username"].(string)
-	if !ok {
-		sendInvalidMessageResponse(sender)
-		return
+func sendTextMessageToRecipient(server *Server, sender *Client, recipient *Client, text string) {
+	// Crear el mensaje JSON
+	message := map[string]string{
+		"type":     "TEXT_FROM",
+		"username": sender.ID,
+		"text":     text,
 	}
 
-	text, ok := msg["text"].(string)
-	if !ok {
-		sendInvalidMessageResponse(sender)
-		return
-	}
-
-	// Block to get clients map in a safe way
-	server.Mu.Lock()
-	recipient, exists := server.Clients[recipientUsername]
-	server.Mu.Unlock()
-
-	if exists {
-		sendTextMessageToRecipient(server, sender, recipient, text)
-	} else {
-		sendNoSuchUserResponse(sender, recipientUsername, "TEXT")
-	}
+	sendJSONMessage(recipient, message, "Error al serializar el mensaje", "Error al enviar el mensaje")
 }
 
 func sendPublicTextToAll(server *Server, sender *Client, text string) {
@@ -85,44 +57,6 @@ func sendPublicTextToAll(server *Server, sender *Client, text string) {
 	sendMessageToAll(server, sender, message, true)
 }
 
-func sendRoomAlreadyExistsResponse(client *Client, roomName string) {
-	response := map[string]string{
-		"type":      "RESPONSE",
-		"operation": "NEW_ROOM",
-		"result":    "ROOM_ALREADY_EXISTS",
-		"extra":     roomName,
-	}
-
-	jsonResponse, err := json.Marshal(response)
-	if err != nil {
-		log.Printf("Error al serializar la respuesta ROOM_ALREADY_EXISTS: %v", err)
-		return
-	}
-
-	_, err = client.Conn.Write(jsonResponse)
-	if err != nil {
-		log.Printf("Error al enviar la respuesta ROOM_ALREADY_EXISTS a %s: %v", client.ID, err)
-	}
-}
-
-func createRoom(server *Server, client *Client, roomName string) {
-	newRoom := &Room{
-		Name:    roomName,
-		Members: make(map[string]*Client),
-		Invited: make(map[string]bool),
-	}
-
-	newRoom.Members[client.ID] = client
-
-	server.RoomMu.Lock()
-	server.Rooms[roomName] = newRoom
-	server.RoomMu.Unlock()
-
-	client.JoinedRooms[roomName] = newRoom
-
-	sendRoomCreationSuccessResponse(client, roomName)
-}
-
 func sendRoomCreationSuccessResponse(client *Client, roomName string) {
 	response := map[string]string{
 		"type":      "RESPONSE",
@@ -131,41 +65,9 @@ func sendRoomCreationSuccessResponse(client *Client, roomName string) {
 		"extra":     roomName,
 	}
 
-	jsonResponse, err := json.Marshal(response)
-	if err != nil {
-		log.Printf("Error al serializar la respuesta SUCCESS: %v", err)
-		return
-	}
+	sendJSONMessage(client, response, "Error al serializar la respuesta SUCCESS",
+		"Error al enviar la respuesta SUCCESS")
 
-	_, err = client.Conn.Write(jsonResponse)
-	if err != nil {
-		log.Printf("Error al enviar la respuesta SUCCESS a %s: %v", client.ID, err)
-	}
-}
-
-func inviteUsersToRoom(server *Server, client *Client, roomName string, invitedUsernames []interface{}) {
-	server.RoomMu.Lock()
-	room := server.Rooms[roomName]
-	server.RoomMu.Unlock()
-
-	for _, invitedUsername := range invitedUsernames {
-		username, _ := invitedUsername.(string)
-
-		if room.Members[username] != nil || room.Invited[username] {
-			continue
-		}
-
-		server.Mu.Lock()
-		invitedClient, exists := server.Clients[username]
-		server.Mu.Unlock()
-
-		if exists {
-			sendInvitationToUser(invitedClient, client.ID, roomName)
-			server.RoomMu.Lock()
-			room.Invited[username] = true
-			server.RoomMu.Unlock()
-		}
-	}
 }
 
 func sendInvitationToUser(invitedClient *Client, inviterUsername string, roomName string) {
@@ -175,36 +77,8 @@ func sendInvitationToUser(invitedClient *Client, inviterUsername string, roomNam
 		"roomname": roomName,
 	}
 
-	jsonInvitation, err := json.Marshal(invitation)
-	if err != nil {
-		log.Printf("Error al serializar la invitación: %v", err)
-		return
-	}
-
-	_, err = invitedClient.Conn.Write(jsonInvitation)
-	if err != nil {
-		log.Printf("Error al enviar la invitación a %s: %v", invitedClient.ID, err)
-	}
-}
-
-func sendNotInvitedResponse(client *Client, roomName string) {
-	response := map[string]string{
-		"type":      "RESPONSE",
-		"operation": "JOIN_ROOM",
-		"result":    "NOT_INVITED",
-		"extra":     roomName,
-	}
-
-	jsonResponse, err := json.Marshal(response)
-	if err != nil {
-		log.Printf("Error al serializar la respuesta NOT_INVITED: %v", err)
-		return
-	}
-
-	_, err = client.Conn.Write(jsonResponse)
-	if err != nil {
-		log.Printf("Error al enviar la respuesta NOT_INVITED a %s: %v", client.ID, err)
-	}
+	sendJSONMessage(invitedClient, invitation, "Error al serializar la respuesta INVITATION",
+		"Error al enviar la respuesta INVITATION")
 }
 
 func sendJoinRoomSuccessResponse(client *Client, roomName string) {
@@ -215,16 +89,9 @@ func sendJoinRoomSuccessResponse(client *Client, roomName string) {
 		"extra":     roomName,
 	}
 
-	jsonResponse, err := json.Marshal(response)
-	if err != nil {
-		log.Printf("Error al serializar la respuesta SUCCESS: %v", err)
-		return
-	}
+	sendJSONMessage(client, response, "Error al serializar la respuesta SUCCESS",
+		"Error al enviar la respuesta SUCCESS")
 
-	_, err = client.Conn.Write(jsonResponse)
-	if err != nil {
-		log.Printf("Error al enviar la respuesta SUCCESS a %s: %v", client.ID, err)
-	}
 }
 
 func notifyRoomMembersUserJoined(server *Server, room *Room, client *Client) {
@@ -249,16 +116,8 @@ func sendRoomUserList(server *Server, client *Client, room *Room) {
 		"users":    users,
 	}
 
-	jsonResponse, err := json.Marshal(response)
-	if err != nil {
-		log.Printf("Error al serializar la lista de usuarios: %v", err)
-		return
-	}
-
-	_, err = client.Conn.Write(jsonResponse)
-	if err != nil {
-		log.Printf("Error al enviar la lista de usuarios a %s: %v", client.ID, err)
-	}
+	sendJSONMessage(client, response, "Error al serializar la lista de usuarios",
+		"Error al enviar la lista de usuarios")
 }
 
 func broadcastRoomTextMessage(server *Server, sender *Client, room *Room, text string) {
@@ -269,20 +128,9 @@ func broadcastRoomTextMessage(server *Server, sender *Client, room *Room, text s
 		"text":     text,
 	}
 
-	jsonMessage, err := json.Marshal(message)
-	if err != nil {
-		log.Printf("Error al serializar el mensaje ROOM_TEXT_FROM: %v", err)
-		return
-	}
+	sendToRoomMembers(sender, room, message, "Error al serializar el mensaje ROOM_TEXT_FROM",
+		"Error al enviar el mensaje ROOM_TEXT_FROM")
 
-	for _, member := range room.Members {
-		if member.ID != sender.ID { // No enviar el mensaje al remitente
-			_, err := member.Conn.Write(jsonMessage)
-			if err != nil {
-				log.Printf("Error al enviar el mensaje ROOM_TEXT_FROM a %s: %v", member.ID, err)
-			}
-		}
-	}
 }
 
 func notifyRoomMembersUserLeft(server *Server, client *Client, room *Room) {
@@ -292,20 +140,9 @@ func notifyRoomMembersUserLeft(server *Server, client *Client, room *Room) {
 		"username": client.ID,
 	}
 
-	jsonMessage, err := json.Marshal(message)
-	if err != nil {
-		log.Printf("Error al serializar el mensaje LEFT_ROOM: %v", err)
-		return
-	}
+	sendToRoomMembers(client, room, message, "Error al serializar el mensaje LEFT_ROOM",
+		"Error al enviar el mensaje LEFT_ROOM")
 
-	for _, member := range room.Members {
-		if member.ID != client.ID {
-			_, err := member.Conn.Write(jsonMessage)
-			if err != nil {
-				log.Printf("Error al enviar el mensaje LEFT_ROOM a %s: %v", member.ID, err)
-			}
-		}
-	}
 }
 
 func notifyAllUsersDisconnected(server *Server, client *Client) {
@@ -314,21 +151,5 @@ func notifyAllUsersDisconnected(server *Server, client *Client) {
 		"username": client.ID,
 	}
 
-	jsonMessage, err := json.Marshal(message)
-	if err != nil {
-		log.Printf("Error al serializar el mensaje DISCONNECTED: %v", err)
-		return
-	}
-
-	// Enviar el mensaje a todos los usuarios conectados
-	server.Mu.Lock()
-	for _, otherClient := range server.Clients {
-		if otherClient.ID != client.ID {
-			_, err := otherClient.Conn.Write(jsonMessage)
-			if err != nil {
-				log.Printf("Error al enviar el mensaje DISCONNECTED a %s: %v", otherClient.ID, err)
-			}
-		}
-	}
-	server.Mu.Unlock()
+	sendMessageToAll(server, client, message, true)
 }

@@ -39,6 +39,31 @@ func handlePublicTextMessage(server *Server, client *Client, msg map[string]inte
 	sendPublicTextToAll(server, client, publicText)
 }
 
+func handleTextMessage(server *Server, sender *Client, msg map[string]interface{}) {
+	recipientUsername, ok := msg["username"].(string)
+	if !ok {
+		sendInvalidMessageResponse(sender)
+		return
+	}
+
+	text, ok := msg["text"].(string)
+	if !ok {
+		sendInvalidMessageResponse(sender)
+		return
+	}
+
+	// Block to get clients map in a safe way
+	server.Mu.Lock()
+	recipient, exists := server.Clients[recipientUsername]
+	server.Mu.Unlock()
+
+	if exists {
+		sendTextMessageToRecipient(server, sender, recipient, text)
+	} else {
+		sendNoSuchUserResponse(sender, recipientUsername, "TEXT")
+	}
+}
+
 func handleNewRoomMessage(server *Server, client *Client, msg map[string]interface{}) {
 	//Verify if the field "roomname" is present
 	roomName, ok := msg["roomname"].(string)
@@ -267,6 +292,5 @@ func handleDisconnectMessage(server *Server, client *Client) {
 	server.Mu.Lock()
 	delete(server.Clients, client.ID)
 	server.Mu.Unlock()
-
 	client.Conn.Close()
 }

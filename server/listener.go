@@ -85,7 +85,7 @@ func processClientMessage(server *Server, client *Client, msg map[string]interfa
 	case "DISCONNECT":
 		handleDisconnectMessage(server, client)
 	default:
-		// Si el tipo de mensaje no es reconocido, enviar respuesta de error y desconectar
+		// if the message is not a valid message, disconnect the client
 		sendInvalidMessageResponse(client)
 	}
 }
