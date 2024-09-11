@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'client.dart';
+import 'listener.dart';
 
 void main(List<String> arguments) async {
   int port = 1234; // Default port
@@ -15,12 +16,8 @@ void main(List<String> arguments) async {
   // Initialize the client
   Client client = Client(port);
   await client.connect();
-    
-  // Wait for user input
-  while (true) {
-    String? input = stdin.readLineSync();
-    if (input != null && input.isNotEmpty) {
-      client.writer.sendMessage(input);
-    }
-  }
+
+  Listener listener = Listener(client.socket, client);
+
+  listener.startListening();
 }

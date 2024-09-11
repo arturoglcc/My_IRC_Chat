@@ -1,28 +1,27 @@
 import 'dart:io';
-import 'writter.dart';
+import 'writer.dart';
 import 'listener.dart';
 import 'client_messages.dart';
+import 'server_messages.dart';
 
 class Client {
   final int port;
   late Socket socket;
-  late Writer writer;
-  late Listener listener;
+  late ClientMessages clientMessages;
+  late Writer writter;
   String? username;
-  bool isFirstMessage = true; // Flag to track if it's the first message
+  bool isFirstMessage = true; // Flag to track if it's the 
 
   Client(this.port);
+      
 
   Future<void> connect() async {
     try {
       socket = await Socket.connect('localhost', port);
       print('Connected to server on port $port');
-
-      writer = Writer(socket);
-      listener = Listener(socket);
-
-// Start receiving user input and sending to server
-      _startUserInputListener();
+      writter = Writer(socket);
+      clientMessages = ClientMessages(writter);
+      startUserInputListener();
     } catch (e) {
       print('Error: $e');
       exit(1);
@@ -30,7 +29,7 @@ class Client {
   }
 
   // This method will handle user input
-  void _startUserInputListener() {
+  void startUserInputListener() {
     print('Bienvenido al servidor! Escribe tu nombre de usuario: ');
 
     // Start listening for user input from the keyboard
@@ -39,7 +38,7 @@ class Client {
 
     // Check if this is the first message
     if (isFirstMessage) {
-      clientMessages.set_username(message);
+      set_username(message);
       isFirstMessage = false; 
     }
 
@@ -53,4 +52,14 @@ class Client {
     username = newUsername;
     print('Te has unido al servidor como "$newUsername"., ya puedes empezar a chatear. escribe /help para obtener información sobre como usar el chat');
   }
+
+    set_username(String username) {
+    Map<String, dynamic> identifyMessage = {
+      'type': 'IDENTIFY',
+      'username': username
+    };
+    writter.sendJsonMessage(identifyMessage);
+  }
+
+  
 }

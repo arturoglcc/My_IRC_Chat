@@ -1,18 +1,10 @@
 import 'dart:convert'; 
-import 'writter.dart'; 
+import 'writer.dart'; 
 
 class ClientMessages {
-  late Writer writer; 
+  final Writer writter; 
 
-  ClientMessages(this.writer); 
-
-  void set_username(String username) {
-    Map<String, dynamic> identifyMessage = {
-      'type': 'IDENTIFY',
-      'username': username
-    };
-    writer.sendJsonMessage(identifyMessage);
-  }
+  ClientMessages(this.writter); 
 
 
   void processMessage(String input) {
@@ -57,7 +49,7 @@ class ClientMessages {
           break;    
       case '/leave'
 
-      default:
+      : default:
         print('Unknown command.');
     }
   }
@@ -89,7 +81,7 @@ class ClientMessages {
       'status': status
     };
 
-    writer.sendJsonMessage(statusMessage);
+    writter.sendJsonMessage(statusMessage);
   }
 
     // Handle the /users command and send the JSON message
@@ -98,10 +90,10 @@ class ClientMessages {
       'type': 'USERS'
     };
 
-    writer.sendJsonMessage(usersMessage); 
+    writter.sendJsonMessage(usersMessage); 
   }
 
-void _handlePrivateMessage(String input) {
+  void _handlePrivateMessage(String input) {
     List<String> parts = input.split(' ');
     String recipient = parts[0].substring(1); // Extract username after '@'
     String messageText = parts.sublist(1).join(' '); // Join the rest of the message
@@ -120,7 +112,7 @@ void _handlePrivateMessage(String input) {
       'username': username,
       'text': text
     };
-  writer.sendJsonMessage(textMessage); 
+  writter.sendJsonMessage(textMessage); 
   }
 
     // Handle the @all message and send public text
@@ -128,47 +120,47 @@ void _handlePrivateMessage(String input) {
     String messageText = input.substring(4).trim(); // Extract text after @all
 
     if (messageText.isNotEmpty) {
-      _sendPublicTextMessage(messageText);
+      sendPublicTextMessage(messageText);
     } else {
       print('No puedes enviar un mensaje vacio.');
     }
   }
 
     // Convert the public text message into a JSON and send it
-  void _sendPublicTextMessage(String text) {
+  void sendPublicTextMessage(String text) {
     Map<String, dynamic> publicTextMessage = {
       'type': 'PUBLIC_TEXT',
       'text': text
     };
 
-    writer.sendJsonMessage(publicTextMessage); // Use the writer's sendJsonMessage
+    writter.sendJsonMessage(publicTextMessage); // Use the writer's sendJsonMessage
   }
 
     // Handle the /cr (create room) command
   void _handleCreateRoom(List<String> parts) {
     if (parts.length > 1) {
       String roomName = parts.sublist(1).join(' ');
-      _sendCreateRoomMessage(roomName);
+      sendCreateRoomMessage(roomName);
     } else {
       print('Please provide a room name.');
     }
   }
 
   // Convert the room creation command into a JSON message and send it
-  void _sendCreateRoomMessage(String roomName) {
+  void sendCreateRoomMessage(String roomName) {
     Map<String, dynamic> newRoomMessage = {
       'type': 'NEW_ROOM',
       'roomname': roomName
     };
 
-    writer.sendJsonMessage(newRoomMessage); // Use the writer's sendJsonMessage
+    writter.sendJsonMessage(newRoomMessage); // Use the writer's sendJsonMessage
   }
 
     // Handle the /inv command
   void _handleInviteCommand(List<String> parts) {
     if (parts.length > 2) {
       String roomName = parts[1]; // Extract the room name
-      List<String> usernames = _extractUsernames(parts.sublist(2)); // Extract usernames after room name
+      List<String> usernames = extractUsernames(parts.sublist(2)); // Extract usernames after room name
 
       _sendInviteMessage(roomName, usernames);
     } else {
@@ -177,7 +169,7 @@ void _handlePrivateMessage(String input) {
   }
 
   // Extract usernames (remove @ and trim spaces)
-  List<String> _extractUsernames(List<String> parts) {
+  List<String> extractUsernames(List<String> parts) {
     return parts
         .map((user) => user.replaceAll('@', '').trim()) // Remove "@" and trim spaces
         .where((user) => user.isNotEmpty) // Only non-empty usernames
@@ -191,7 +183,7 @@ void _handlePrivateMessage(String input) {
       'roomname': roomName,
       'usernames': usernames
     };
-    writer.sendJsonMessage(inviteMessage);
+    writter.sendJsonMessage(inviteMessage);
   }
 
     // Handle the /join command
@@ -211,7 +203,7 @@ void _handlePrivateMessage(String input) {
       'roomname': roomName
     };
 
-    writer.sendJsonMessage(joinRoomMessage); 
+    writter.sendJsonMessage(joinRoomMessage); 
   }
 
   // Handle the /ru (room users) command
@@ -260,7 +252,7 @@ void _handlePrivateMessage(String input) {
       'text': text
     };
 
-    writer.sendJsonMessage(roomTextMessage); 
+    writter.sendJsonMessage(roomTextMessage); 
   }
 
   // Handle the /lr (leave room) command
@@ -280,7 +272,7 @@ void _handlePrivateMessage(String input) {
       'roomname': roomName
     };
 
-    writer.sendJsonMessage(leaveRoomMessage); 
+    writter.sendJsonMessage(leaveRoomMessage); 
   }
 
     // Handle the /leave command
@@ -289,6 +281,6 @@ void _handlePrivateMessage(String input) {
       'type': 'DISCONNECT'
     };
 
-    writer.sendJsonMessage(disconnectMessage); 
+    writter.sendJsonMessage(disconnectMessage); 
   }
 }
