@@ -40,10 +40,10 @@ class Client {
     if (isFirstMessage) {
       set_username(message);
       isFirstMessage = false; 
-    }
-
+    } else {
       // Send the message to the ClientMessages object for processing
       clientMessages.processMessage(message);
+      }
     });
   }
 
@@ -54,6 +54,7 @@ class Client {
   }
 
     set_username(String username) {
+      print("llegue a set username");
     Map<String, dynamic> identifyMessage = {
       'type': 'IDENTIFY',
       'username': username

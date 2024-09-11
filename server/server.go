@@ -185,7 +185,29 @@ func (s *Server) handleConnection(conn net.Conn) {
 	s.Clients[identifyMsg.Username] = client
 	s.Mu.Unlock()
 
-	conn.Write([]byte("Te has unido al cuarto general.\n"))
+	// Crear el mensaje de respuesta
+	response := map[string]string{
+		"type":      "RESPONSE",
+		"operation": "IDENTIFY",
+		"result":    "SUCCESS",
+		"extra":     client.ID,
+	}
+
+	// Serializar el mensaje a formato JSON
+	jsonResponse, err := json.Marshal(response)
+	if err != nil {
+		log.Printf("Error al serializar el mensaje de IDENTIFY: %v", err)
+		return
+	}
+
+	// Enviar el mensaje al cliente
+	_, err = conn.Write(jsonResponse)
+	if err != nil {
+		log.Printf("Error al enviar el mensaje de IDENTIFY a %s: %v", client.ID, err)
+		return
+	}
+
+	fmt.Printf("Usuario %s identificado exitosamente.\n", client.ID)
 
 	notifyNewUser(s, client)
 
