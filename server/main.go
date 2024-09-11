@@ -8,7 +8,7 @@ import (
 )
 
 func main() {
-	portPtr := flag.Int("port", 8080, "Port number for the server to listen on")
+	portPtr := flag.Int("port", 1234, "Port number for the server to listen on")
 	flag.Parse()
 
 	// Check if the provided port is within the valid range
