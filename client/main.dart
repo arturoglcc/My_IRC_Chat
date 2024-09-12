@@ -1,6 +1,8 @@
-import 'dart:io';
 import 'client.dart';
-import 'listener.dart';
+import 'server_listener.dart';
+import 'dart:io';
+import 'user_input_listener.dart';
+
 
 void main(List<String> arguments) async {
   int port = 1234; // Default port
@@ -13,11 +15,13 @@ void main(List<String> arguments) async {
     }
   }
 
-  // Initialize the client
-  Client client = Client(port);
-  await client.connect();
+  Socket socket = await Socket.connect('localhost', port);
 
-  Listener listener = Listener(client.socket, client);
+  Client client = Client(port, socket);
 
-  listener.startListening();
+  ServerListener serverListener = ServerListener(socket, client);
+  serverListener.startListening(); 
+    
+  UserInputListener userInputListener = UserInputListener(socket, client);
+  userInputListener.startListening(); 
 }

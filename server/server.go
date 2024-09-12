@@ -79,7 +79,7 @@ func (s *Server) Start() {
 }
 
 func (s *Server) handleConnection(conn net.Conn) {
-	defer conn.Close()
+	//defer conn.Close()
 
 	buf := make([]byte, 1024)
 

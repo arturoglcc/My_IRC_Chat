@@ -2,7 +2,9 @@ package main
 
 import (
 	"encoding/json"
+	"io"
 	"log"
+	"strings"
 )
 
 // sendInvalidMessageResponse Send error message to the client and then disconnects them
@@ -27,28 +29,36 @@ func sendInvalidMessageResponse(client *Client) {
 	client.Conn.Close()
 	log.Printf("Conexión con el cliente %s cerrada por mensaje inválido.", client.ID)
 }
-
 func listenToClientMessages(server *Server, client *Client) {
 	buf := make([]byte, 1024)
+	var incompleteMessage string
 
 	for {
 		n, err := client.Conn.Read(buf)
 		if err != nil {
+			// Verificar si el error es por conexión cerrada
+			if err == io.EOF || strings.Contains(err.Error(), "use of closed network connection") {
+				log.Printf("Cliente %s desconectado.", client.ID)
+				break
+			}
 			log.Printf("Error leyendo mensaje del cliente %s: %v", client.ID, err)
 			break
 		}
-		message := string(buf[:n])
 
-		// Verify message is a valid json
+		// Añadir al buffer de mensajes incompletos
+		incompleteMessage += string(buf[:n])
+
+		// Verificar si el mensaje está completo (por ejemplo, si es un JSON válido)
 		var msg map[string]interface{}
-		err = json.Unmarshal([]byte(message), &msg)
+		err = json.Unmarshal([]byte(incompleteMessage), &msg)
 		if err != nil {
-			// The message is not a valid json, disconnects the client and send a message
-			sendInvalidMessageResponse(client)
-			break
+			// Si no es JSON válido, espera por más datos y no desconectes al cliente
+			continue
 		}
 
+		// Procesar el mensaje completo y reiniciar el buffer
 		processClientMessage(server, client, msg)
+		incompleteMessage = ""
 	}
 }
 
