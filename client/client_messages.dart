@@ -9,11 +9,11 @@ class ClientMessages {
   void processMessage(String input) {
     if (input.startsWith('@all')) {
       _handlePublicMessage(input);
-    } else if (input.startsWith('@')) {
-      _handlePrivateMessage(input);
     } else if (input.contains('-->')) {
       _handleRoomTextMessage(input);
-    } else {
+    }else if (input.startsWith('@')) {
+      _handlePrivateMessage(input);
+    }  else {
     if (input.isEmpty) return;
     List<String> parts = input.split(' ');
     String command = parts[0];
