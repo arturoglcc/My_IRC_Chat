@@ -235,6 +235,7 @@ List<String> extractUsernames(List<String> parts) {
       'type': 'ROOM_USERS',
       'roomname': roomName
     };
+    writter.sendJsonMessage(roomUsersMessage); 
   }
 
 
@@ -307,7 +308,7 @@ Client commands:
 5. /cr [roomname] - Create a new chat room with the given name.
 6. /inv [roomname] @user1 @user2 ... @userN - invite users to a room you are in. 
 7. /join [roomname] - Join an existing chat room.
-8. /leave - Leave the current chat room.
+8. /leave [roomname] - Leave the chat room.
 9. /ru [roomname] - List all users in a specific chat room.
 10. @all [message] - Send a message to all users in the chat.
 11. @roomname --> [message] - Send a message to a specific chat room.

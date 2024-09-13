@@ -68,7 +68,7 @@ class HandleServerMessages {
   static void handleInvitation(Map<String, dynamic> message) {
     String username = message['username'];
     String roomName = message['roomname'];
-    print('Has sido invitado a $roomName por $username.');
+    print('Has sido invitado a $roomName por $username. (Usa /join $roomName para unirte)');
   }
 
     // Handle "NO_SUCH_ROOM" result for INVITE operation
