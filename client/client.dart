@@ -1,8 +1,6 @@
 import 'dart:io';
 import 'writer.dart';
-import 'server_listener.dart';
 import 'client_messages.dart';
-import 'server_messages.dart';
 
 class Client {
   final int port;
