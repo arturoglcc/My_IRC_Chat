@@ -94,7 +94,20 @@ func (s *Server) handleConnection(conn net.Conn) {
 	var identifyMsg IdentifyMessage
 	err = json.Unmarshal(buf[:n], &identifyMsg)
 	if err != nil {
-		conn.Write([]byte("Error: El mensaje no es un JSON válido.\n"))
+		errorResponse := map[string]string{
+			"Type":      "RESPONSE",
+			"Operation": "INVALID",
+			"Result":    "INVALID",
+		}
+
+		jsonResponse, err := json.Marshal(errorResponse)
+		if err != nil {
+			fmt.Println("Error al generar el JSON de respuesta:", err)
+			return
+		}
+
+		conn.Write(jsonResponse)
+		conn.Write([]byte("\n"))
 		return
 	}
 
