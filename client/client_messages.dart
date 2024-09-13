@@ -1,4 +1,3 @@
-import 'dart:convert'; 
 import 'writer.dart'; 
 
 class ClientMessages {
@@ -47,9 +46,12 @@ class ClientMessages {
       case '/lr':
           _handleLeaveRoom(parts);
           break;    
-      case '/leave'
-
-      : default:
+      case '/leave':
+        _handleDisconnect();
+        break;
+      case '/help':
+      _handleHelp();
+      default:
         print('Unknown command.');
     }
   }
@@ -136,15 +138,17 @@ class ClientMessages {
     writter.sendJsonMessage(publicTextMessage); // Use the writer's sendJsonMessage
   }
 
-    // Handle the /cr (create room) command
-  void _handleCreateRoom(List<String> parts) {
-    if (parts.length > 1) {
-      String roomName = parts.sublist(1).join(' ');
-      sendCreateRoomMessage(roomName);
-    } else {
-      print('Please provide a room name.');
-    }
+// Handle the /cr (create room) command
+void _handleCreateRoom(List<String> parts) {
+  if (parts.length > 1) {
+    // Join the parts starting from index 1 (the room name) to include spaces
+    String roomName = parts.sublist(1).join(' ');
+    sendCreateRoomMessage(roomName);
+  } else {
+    print('Please provide a room name.');
   }
+}
+
 
   // Convert the room creation command into a JSON message and send it
   void sendCreateRoomMessage(String roomName) {
@@ -156,26 +160,35 @@ class ClientMessages {
     writter.sendJsonMessage(newRoomMessage); // Use the writer's sendJsonMessage
   }
 
-    // Handle the /inv command
-  void _handleInviteCommand(List<String> parts) {
-    if (parts.length > 2) {
-      String roomName = parts[1]; // Extract the room name
-      List<String> usernames = extractUsernames(parts.sublist(2)); // Extract usernames after room name
+// Handle the /inv command with room names that might contain spaces
+void _handleInviteCommand(List<String> parts) {
+  // Find where the usernames start (first part that begins with @)
+  int usernameStartIndex = parts.indexWhere((part) => part.startsWith('@'));
 
+  if (usernameStartIndex > 1) {
+    // Join all parts before the first username as the room name
+    String roomName = parts.sublist(1, usernameStartIndex).join(' ');
+
+    // Extract usernames from the parts starting from usernameStartIndex
+    List<String> usernames = extractUsernames(parts.sublist(usernameStartIndex));
+
+    if (usernames.isNotEmpty) {
       _sendInviteMessage(roomName, usernames);
     } else {
-      print('Please provide a room name and at least one username.');
+      print('Please provide at least one valid username to invite.');
     }
+  } else {
+    print('Please provide a room name and at least one username.');
   }
+}
 
-  // Extract usernames (remove @ and trim spaces)
-  List<String> extractUsernames(List<String> parts) {
-    return parts
-        .map((user) => user.replaceAll('@', '').trim()) // Remove "@" and trim spaces
-        .where((user) => user.isNotEmpty) // Only non-empty usernames
-        .toList();
-  }
-
+// Extract usernames (remove @ and trim spaces)
+List<String> extractUsernames(List<String> parts) {
+  return parts
+      .map((user) => user.replaceAll('@', '').trim()) // Remove "@" and trim spaces
+      .where((user) => user.isNotEmpty) // Only non-empty usernames
+      .toList();
+}
   // Send the invite message in JSON format
   void _sendInviteMessage(String roomName, List<String> usernames) {
     Map<String, dynamic> inviteMessage = {
@@ -282,5 +295,24 @@ class ClientMessages {
     };
 
     writter.sendJsonMessage(disconnectMessage); 
+  }
+
+  void _handleHelp() {
+      String commands = '''
+Client commands:
+1. /help - Displays this help message with a list of available commands.
+2. /status [away|busy|active] - Set your current status (e.g., away, busy, or active).
+3. /users - Displays a list of all users currently connected to the server.
+4. @[username] [message] - Send a private message to a specific user.
+5. /cr [roomname] - Create a new chat room with the given name.
+6. /join [roomname] - Join an existing chat room.
+7. /leave - Leave the current chat room.
+8. /ru [roomname] - List all users in a specific chat room.
+9. @all [message] - Send a message to all users in the chat.
+10. @roomname --> [message] - Send a message to a specific chat room.
+11. /disconnect - Disconnect from the server.
+''';
+
+  print(commands);
   }
 }

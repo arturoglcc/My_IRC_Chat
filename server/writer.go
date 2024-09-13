@@ -54,7 +54,7 @@ func sendPublicTextToAll(server *Server, sender *Client, text string) {
 		"text":     text,
 	}
 
-	sendMessageToAll(server, sender, message, true)
+	sendMessageToAll(server, sender, message, false)
 }
 
 func sendRoomCreationSuccessResponse(client *Client, roomName string) {
