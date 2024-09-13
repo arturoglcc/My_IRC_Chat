@@ -1,8 +1,6 @@
 import 'dart:convert'; 
 import 'client.dart'; 
 import 'handle_server_messages.dart'; 
-import 'client_messages.dart'; 
-import 'writer.dart'; 
 import 'dart:io';
 
 class ServerMessages {
@@ -34,6 +32,9 @@ class ServerMessages {
         break;
       case 'DISCONNECTED':
         HandleServerMessages.handleDisconnected(jsonMessage);
+        break;
+       case 'INVITATION':
+        HandleServerMessages.handleInvitation(jsonMessage);
         break;
       case 'ROOM_TEXT_FROM':
         HandleServerMessages.handleRoomTextFrom(jsonMessage);

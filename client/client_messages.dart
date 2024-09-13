@@ -305,12 +305,13 @@ Client commands:
 3. /users - Displays a list of all users currently connected to the server.
 4. @[username] [message] - Send a private message to a specific user.
 5. /cr [roomname] - Create a new chat room with the given name.
-6. /join [roomname] - Join an existing chat room.
-7. /leave - Leave the current chat room.
-8. /ru [roomname] - List all users in a specific chat room.
-9. @all [message] - Send a message to all users in the chat.
-10. @roomname --> [message] - Send a message to a specific chat room.
-11. /disconnect - Disconnect from the server.
+6. /inv [roomname] @user1 @user2 ... @userN - invite users to a room you are in. 
+7. /join [roomname] - Join an existing chat room.
+8. /leave - Leave the current chat room.
+9. /ru [roomname] - List all users in a specific chat room.
+10. @all [message] - Send a message to all users in the chat.
+11. @roomname --> [message] - Send a message to a specific chat room.
+12. /disconnect - Disconnect from the server.
 ''';
 
   print(commands);
