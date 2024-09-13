@@ -1,6 +1,9 @@
 package main
 
-import "log"
+import (
+	"log"
+	"time"
+)
 
 func handleStatusMessage(server *Server, client *Client, msg map[string]interface{}) {
 	// Verify status field is present and in a string
@@ -274,8 +277,8 @@ func handleDisconnectMessage(server *Server, client *Client) {
 	for _, room := range server.Rooms {
 		if _, exists := room.Members[client.ID]; exists {
 			notifyRoomMembersUserLeft(server, client, room)
+			time.Sleep(10 * time.Millisecond)
 			delete(room.Members, client.ID)
-
 			if room.Name == "General" && len(room.Members) == 0 {
 				server.RoomMu.Unlock()
 				terminateServer()

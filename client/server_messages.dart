@@ -38,7 +38,7 @@ class ServerMessages {
         break;
       case 'JOINED_ROOM':
       HandleServerMessages.handleJoinedRoom(jsonMessage);
-      case 'ROOM_USERS_LIST':
+      case 'ROOM_USER_LIST':
         HandleServerMessages.handleRoomUserList(jsonMessage);
         break;
       case 'ROOM_TEXT_FROM':
