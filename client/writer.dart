@@ -7,7 +7,6 @@ class Writer {
   Writer(this.socket);
 
   void sendJsonMessage(Map<String, dynamic> message) {
-    print('Este mensaje se envia al servidor: ' + jsonEncode(message));
     String jsonString = jsonEncode(message);
     sendMessage(jsonString); 
   }

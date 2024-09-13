@@ -1,0 +1,84 @@
+\documentclass{article}
+\usepackage{amsmath}
+\usepackage{amssymb}
+
+\title{Design}
+\date{}
+
+\begin{document}
+
+\maketitle
+
+\section*{1. Server Class}
+\textbf{Purpose:} Acts as the central point of communication, managing client connections and handling requests.
+
+\textbf{Responsibilities:}
+\begin{itemize}
+    \item Listening for incoming client connections.
+    \item Accepting connections and assigning them to threads from the thread pool.
+    \item Routing messages between clients and handling room management.
+\end{itemize}
+
+\section*{2. Thread Pool Class}
+\textbf{Purpose:} Manages a pool of reusable threads to handle multiple client requests efficiently.
+
+\textbf{Responsibilities:}
+\begin{itemize}
+    \item Managing the lifecycle of threads.
+    \item Assigning tasks (e.g., handling client communication) to available threads.
+    \item Ensuring that threads are reused to optimize resource utilization.
+\end{itemize}
+
+\section*{3. Users Class}
+\textbf{Purpose:} Centralized management of all connected users and their data.
+
+\textbf{Responsibilities:}
+\begin{itemize}
+    \item Storing user information such as usernames, connection states, and room memberships.
+    \item Providing methods to add, remove, and update user data.
+    \item Tracking which users are in which rooms, facilitating message routing.
+\end{itemize}
+
+\section*{4. Execution Class}
+\textbf{Purpose:} Handles the transformation and routing of messages between the server and the client.
+
+\textbf{Responsibilities:}
+\begin{itemize}
+    \item Parsing incoming messages from clients.
+    \item Formatting messages into the JSON protocol.
+    \item Sending messages to clients via the server.
+    \item Handling different message types (e.g., join room, send message) according to your protocol.
+\end{itemize}
+
+\section*{5. Client Class}
+\textbf{Purpose:} Represents a client that connects to the server, sends, and receives messages.
+
+\textbf{Responsibilities:}
+\begin{itemize}
+    \item Establishing a connection with the server.
+    \item Sending messages to the server.
+    \item Receiving messages from the server and displaying them to the user.
+    \item Handling user input and translating it into the appropriate protocol messages.
+\end{itemize}
+
+\section*{How These Classes Interact}
+
+\subsection*{Server and Thread Pool:}
+The \texttt{Server} class will use the \texttt{Thread Pool} to handle incoming client connections. When a client connects, the server assigns the communication task to a thread from the pool.
+
+\subsection*{Server and Users:}
+The \texttt{Server} class will interact with the \texttt{Users} class to manage user data. For example, when a new client connects, the server will add a new user to the \texttt{Users} class. When a client sends a message to a room, the server will query the \texttt{Users} class to determine which users are in that room and route the message accordingly.
+
+\subsection*{Execution Class:}
+The \texttt{Execution} class acts as a bridge between the raw communication happening on the server and the logic for handling user commands. For example, when a user sends a message, the \texttt{Execution} class could take the raw data, parse it into a JSON object, and then hand it off to the \texttt{Server} or \texttt{Users} class for further processing.
+
+\subsection*{Client:}
+The \texttt{Client} class will interact with the \texttt{Server} over a network connection, sending and receiving messages according to the protocol you've designed. It’s independent of the server, but they must adhere to the same communication protocol to ensure they can interact correctly.
+
+\section*{Next Steps}
+
+You can start by implementing these classes one by one, testing each independently before integrating them together. Begin with the \texttt{Server} and \texttt{Client} classes to establish basic communication. Then add the \texttt{Thread Pool} to manage connections efficiently, followed by the \texttt{Users} class to handle user data. Finally, implement the \texttt{Execution} class to manage and route messages.
+
+This modular approach will help you build a robust and scalable IRC system, and it will also make it easier to extend and maintain your codebase in the future.
+
+\end{document}

@@ -17,7 +17,7 @@ class UserInputListener {
   }
 
   void startListening() {
-    print('Bienvenido al servidor, escribe tu nombre de usuario: ');
+    stdout.write('Bienvenido al servidor, escribe tu nombre de usuario: ');
     stdin.listen((data) {
       String message = utf8.decode(data).trim();
       if (message.isNotEmpty) {

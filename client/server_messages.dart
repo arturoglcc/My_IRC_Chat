@@ -128,7 +128,12 @@ class ServerMessages {
           HandleServerMessages.handleNotJoinedRoom(message); 
         }
         break;
-
+      
+      case 'INVALID':
+      if (result == 'NOT_IDENTIFIED') {
+        handleNotIdentified();
+      }
+      break;
 
       default:
         print("Unknown operation: $operation");
@@ -145,6 +150,15 @@ class ServerMessages {
 
     // Once a valid username is entered, call set_username
     client.set_username(newUsername.trim());
+  }
+
+    // Método para manejar el caso de NO IDENTIFICADO
+  void handleNotIdentified() {
+    // Mensaje para el usuario
+    print('Lo primero que debes hacer al conectarte al servidor es identificarte, has sido desconectado del servidor.');
+
+    // Desconectar del servidor
+    client.disconnect();
   }
 }
 

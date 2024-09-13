@@ -17,7 +17,6 @@ class ServerListener {
       (data) {
         // Decode the received data using UTF-8 to handle special characters
         String message = utf8.decode(data).trim();
-        print('Message from server: $message');
         serverMessages.processMessage(message); 
       },
       onError: (error) {

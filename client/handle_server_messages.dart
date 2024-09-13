@@ -61,7 +61,7 @@ class HandleServerMessages {
   // Handle room already exists case
   static void handleRoomAlreadyExists(Map<String, dynamic> message) {
     String roomName = message['extra'];
-    print('El cuarto "$roomName" ya existe.');
+    print('El cuarto "$roomName" ya existe o el nombre del cuarto tiene mas de 16 caracteres.');
   }
 
     // Handle "INVITATION" type messages

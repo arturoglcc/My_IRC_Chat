@@ -16,7 +16,7 @@ class Client {
     // Function to update the username after a successful identification
   void updateUsername(String newUsername) {
     username = newUsername;
-    print('Te has unido al servidor como "$newUsername"., ya puedes empezar a chatear. escribe /help para obtener información sobre como usar el chat');
+    print('Te has unido al servidor como "$newUsername". Ya puedes empezar a chatear.\nEscribe /help para obtener información sobre como usar el chat');
   }
 
     set_username(String username) {
@@ -27,5 +27,8 @@ class Client {
     writter.sendJsonMessage(identifyMessage);
   }
 
-  
+  void disconnect() {
+    print('Desconectando del servidor...');
+    socket.close();
+  }
 }

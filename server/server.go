@@ -7,7 +7,9 @@ import (
 	"log"
 	"net"
 	"os"
+	"os/signal"
 	"sync"
+	"syscall"
 	"time"
 )
 
@@ -54,6 +56,28 @@ func NewServer(address string) *Server {
 	server.Rooms["general"] = generalRoom
 
 	return server
+}
+
+// Handle signals to shut down the server gracefully
+func (s *Server) handleSignals() {
+	// Create a channel to listen for interrupt signals (Ctrl+C, SIGTERM)
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+
+	// Block until we receive a signal
+	sig := <-sigChan
+	fmt.Printf("\nReceived signal: %v, shutting down server...\n", sig)
+
+	// Disconnect all clients
+	s.Mu.Lock()
+	for _, client := range s.Clients { // Accede a los valores, no a las claves
+		client.Conn.Close() // Close the connection properly
+	}
+	s.Mu.Unlock()
+
+	// Optionally, wait for goroutines to finish here (if needed)
+
+	os.Exit(0) // Exit the program
 }
 
 // Start starts the server to listen for incoming client connections.
@@ -107,7 +131,6 @@ func (s *Server) handleConnection(conn net.Conn) {
 		}
 
 		conn.Write(jsonResponse)
-		conn.Write([]byte("\n"))
 		return
 	}
 
