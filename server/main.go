@@ -22,8 +22,8 @@ func main() {
 	fmt.Printf("Starting server on port %s...\n", port)
 
 	// Use the provided port in the server initialization
-	server := NewServer(":" + port) // Initialize the server with the specified address and port
-	server.Start()                  // Start the server
+	server := NewServer("0.0.0.0:" + port) // Initialize the server with the specified address and port
+	server.Start()                         // Start the server
 
 	fmt.Println("Server stopped.")
 }
