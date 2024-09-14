@@ -87,7 +87,7 @@ class HandleServerMessages {
   static void handleJoinedRoom(Map<String, dynamic> message) {
     String username = message['username'];
     String roomName = message['roomname'];
-    print('$username se ha unido a la $roomName.');
+    print('$username se ha unido a $roomName.');
   }
 
   // Handle "NOT_JOINED" result for ROOM_TEXT operation

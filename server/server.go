@@ -70,12 +70,10 @@ func (s *Server) handleSignals() {
 
 	// Disconnect all clients
 	s.Mu.Lock()
-	for _, client := range s.Clients { // Accede a los valores, no a las claves
-		client.Conn.Close() // Close the connection properly
+	for _, client := range s.Clients {
+		client.Conn.Close()
 	}
 	s.Mu.Unlock()
-
-	// Optionally, wait for goroutines to finish here (if needed)
 
 	os.Exit(0) // Exit the program
 }
@@ -86,7 +84,6 @@ func (s *Server) Start() {
 	if err != nil {
 		log.Fatalf("Failed to start server: %v", err)
 	}
-	defer listener.Close()
 
 	fmt.Printf("Server listening on %s\n", s.Address)
 
@@ -103,8 +100,6 @@ func (s *Server) Start() {
 }
 
 func (s *Server) handleConnection(conn net.Conn) {
-	//defer conn.Close()
-
 	buf := make([]byte, 1024)
 
 	// Reads the first message of the client (it's supposed to be the identify Json)

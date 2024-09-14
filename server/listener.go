@@ -39,6 +39,7 @@ func listenToClientMessages(server *Server, client *Client) {
 			// Verificar si el error es por conexión cerrada
 			if err == io.EOF || strings.Contains(err.Error(), "use of closed network connection") {
 				log.Printf("Cliente %s desconectado.", client.ID)
+				handleDisconnectMessage(server, client)
 				break
 			}
 			log.Printf("Error leyendo mensaje del cliente %s: %v", client.ID, err)
