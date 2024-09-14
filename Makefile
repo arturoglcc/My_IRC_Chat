@@ -1,45 +1,30 @@
-# Makefile
+# Directorios de los archivos fuente
+SERVER_SRC = ./server/*.go
+CLIENT_SRC = ./client/main.dart
 
-# Define directories
-GO_SRC_DIR := ./src/server
-JS_SRC_DIR := ./src/client
-GO_BUILD_DIR := ./build
-JS_BUILD_DIR := ./build/client
-GO_EXEC := my_irc_server
-SERVER_TEST_DIR := ./tests/server_tests
-CLIENT_TEST_FILE := ./tests/client_test.js
+# Nombre del ejecutable del servidor y cliente
+SERVER_EXECUTABLE = ./server/server   # Ejecutable del servidor dentro de la carpeta 'server'
+CLIENT_EXECUTABLE = ./client/client   # Ejecutable del cliente dentro de la carpeta 'client'
 
-# Default target
-all: test-server test-client build-server build-client
-
-# Run Go unit tests for the server
-test-server:
-	@echo "Running Go server unit tests..."
-	go test -v $(SERVER_TEST_DIR)
-
-# Run JavaScript unit tests for the client (using Jest)
-test-client:
-	@echo "Running JavaScript client unit tests..."
-	cd $(JS_SRC_DIR) && npm test ../$(CLIENT_TEST_FILE)
-
-# Build Go server executable
+# Comando para compilar el servidor (usando Go)
 build-server:
-	@echo "Building Go server executable..."
-	mkdir -p $(GO_BUILD_DIR)
-	go build -o $(GO_BUILD_DIR)/$(GO_EXEC) $(GO_SRC_DIR)/main.go
+	@echo "Compilando servidor..."
+	go build -o $(SERVER_EXECUTABLE) $(SERVER_SRC)
+	@echo "Servidor compilado: $(SERVER_EXECUTABLE)"
 
-# Build JavaScript client (e.g., using Webpack)
+# Comando para compilar el cliente (usando Dart)
 build-client:
-	@echo "Building JavaScript client..."
-	mkdir -p $(JS_BUILD_DIR)
-	cd $(JS_SRC_DIR) && npm run build -- --output-path=$(JS_BUILD_DIR)
+	@echo "Compilando cliente..."
+	dart compile exe $(CLIENT_SRC) -o $(CLIENT_EXECUTABLE)
+	@echo "Cliente compilado: $(CLIENT_EXECUTABLE)"
 
-# Clean all build files and outputs
+# Comando para compilar ambos: servidor y cliente
+build-all: build-server build-client
+	@echo "Compilados ambos: servidor y cliente"
+
+# Limpieza de los ejecutables generados
 clean:
-	@echo "Cleaning up build files..."
-	rm -rf $(GO_BUILD_DIR)/*
-	rm -rf $(JS_BUILD_DIR)/*
-
-# Phony targets to prevent conflicts with files
-.PHONY: all test-server test-client build-server build-client clean
+	@echo "Eliminando ejecutables..."
+	rm -f $(SERVER_EXECUTABLE) $(CLIENT_EXECUTABLE)
+	@echo "Limpieza completa"
 
